@@ -27,10 +27,10 @@ BackpropagationPerceptron::~BackpropagationPerceptron() {
 	for (size_t i = 0; i < layers_count_ - 1; i++) {
 		delete (W_[i]);
 		delete (prev_direction_W_[i]);
-		delete (answers_[i]);
-		delete (descent_gradient_[i]);
+		delete[] answers_[i];
+		delete[] descent_gradient_[i];
 	}
-	delete (answers_[layers_count_ - 1]);
+	delete[] answers_[layers_count_ - 1];
 
 	delete[] W_;
 	delete[] prev_direction_W_;
