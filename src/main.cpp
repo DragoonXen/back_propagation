@@ -55,5 +55,9 @@ int main() {
 	}
 	cout << err_sum / rows_count << endl;
 
+	fstream load_stream("base_model.bin", std::ios_base::in | std::ios_base::binary);
+	BackpropagationPerceptron per2(load_stream, 0.05, 0.9);
+	load_stream.close();
+	cout << per2.evaluate_perceptron(data, results, rows_count) << endl;
 	return 0;
 }

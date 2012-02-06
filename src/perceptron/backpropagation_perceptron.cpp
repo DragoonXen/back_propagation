@@ -33,11 +33,10 @@ BackpropagationPerceptron::BackpropagationPerceptron(vector<size_t> &layers, dou
 }
 
 BackpropagationPerceptron::BackpropagationPerceptron(fstream &load_stream, double learning_speed,
-		double inertia, bool add_const_x) {
+		double inertia) {
 	remembered_W_ = NULL;
 	learning_speed_ = learning_speed;
 	inertia_ = inertia;
-	add_const_x_ = add_const_x;
 	load(load_stream);
 }
 
@@ -120,8 +119,9 @@ void BackpropagationPerceptron::teach_by_errors_row(double* errors_row) {
 		for (size_t i = 0; i != layer_neuron_count_[index + 1]; i++) {
 			descent_gradient_[index][i] = 0;
 			for (size_t j = 0; j != layer_neuron_count_[index + 2]; j++) {
-				descent_gradient_[index][i] += (*W_[index + 1])[j][i] * descent_gradient_[index + 1][j]
-						* (1.0 - answers_[index + 1][j]) * answers_[index + 1][j];
+				descent_gradient_[index][i] += (*W_[index + 1])[j][i]
+						* descent_gradient_[index + 1][j] * (1.0 - answers_[index + 1][j])
+						* answers_[index + 1][j];
 			}
 		}
 	}
@@ -196,6 +196,7 @@ double BackpropagationPerceptron::evaluate_perceptron(double** test_rows, double
 //private
 
 void BackpropagationPerceptron::load(fstream &load_stream) {
+	load_stream.read((char*) &add_const_x_, sizeof(add_const_x_));
 	load_stream.read((char*) &layers_count_, sizeof(layers_count_));
 	vector<size_t> layers;
 	layers.reserve(layers_count_);
@@ -213,6 +214,7 @@ void BackpropagationPerceptron::load(fstream &load_stream) {
 }
 
 void BackpropagationPerceptron::save(fstream &save_stream) {
+	save_stream.write((char*) &add_const_x_, sizeof(add_const_x_));
 	save_stream.write((char*) &layers_count_, sizeof(layers_count_));
 	save_stream.write((char*) layer_neuron_count_, sizeof(layer_neuron_count_[0]) * layers_count_);
 	for (size_t i = 0; i != layers_count_ - 1; i++) {

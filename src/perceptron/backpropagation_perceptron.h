@@ -25,7 +25,7 @@ public:
 	BackpropagationPerceptron(vector<size_t> &layers, double learning_speed = 0.05, double inertia =
 			0.5, bool add_const_x = true);
 	BackpropagationPerceptron(fstream &load_stream, double learning_speed = 0.05, double inertia =
-			0.5, bool add_const_x = true);
+			0.5);
 	virtual ~BackpropagationPerceptron();
 
 	double learning_speed();
