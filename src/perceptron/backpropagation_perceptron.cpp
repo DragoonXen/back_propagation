@@ -139,6 +139,32 @@ void BackpropagationPerceptron::teach_by_errors_row(double* errors_row) {
 }
 
 void BackpropagationPerceptron::perceptron_learning(double** rows, double** results,
+		size_t data_count, size_t test_part, size_t miss_iterations_to_stop,
+		double decrease_learning_speed_factor) {
+	size_t order[data_count];
+	for (size_t i = 0; i != data_count; i++) {
+		order[i] = i;
+	}
+	random_shuffle(order, order + data_count);
+	double** send_rows = new double*[data_count];
+	double** send_results_rows = new double*[data_count];
+	for (size_t i = 0; i != data_count; i++) {
+		send_rows[i] = rows[order[i]];
+		send_results_rows[i] = results[order[i]];
+	}
+
+	size_t test_rows_count = data_count / test_part;
+	size_t train_rows_count = data_count - test_rows_count;
+
+	perceptron_learning(send_rows, send_results_rows, train_rows_count,
+			send_rows + train_rows_count, send_results_rows + train_rows_count, test_rows_count,
+			miss_iterations_to_stop, decrease_learning_speed_factor);
+
+	delete[] send_rows;
+	delete[] send_results_rows;
+}
+
+void BackpropagationPerceptron::perceptron_learning(double** rows, double** results,
 		size_t data_count, double** test_rows, double** test_results, size_t test_data_count,
 		size_t miss_iterations_to_stop, double decrease_learning_speed_factor) {
 	size_t order[data_count];

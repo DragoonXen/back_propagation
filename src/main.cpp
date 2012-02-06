@@ -36,10 +36,7 @@ int main() {
 	}
 	f.close();
 
-	size_t test_count = rows_count / 10;
-	size_t learn_count = rows_count - test_count;
-	per.perceptron_learning(data, results, learn_count, data + learn_count, results + learn_count,
-			test_count, 10, 0.7);
+	per.perceptron_learning(data, results, rows_count, 10, 10, 0.9);
 
 	fstream save_stream("base_model.bin", std::ios_base::out | std::ios_base::binary);
 	per.save(save_stream);

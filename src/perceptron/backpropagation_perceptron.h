@@ -23,9 +23,9 @@ class BackpropagationPerceptron {
 
 public:
 	BackpropagationPerceptron(vector<size_t> &layers, double learning_speed = 0.05, double inertia =
-			0.5, bool add_const_x = true);
+			0.0, bool add_const_x = true);
 	BackpropagationPerceptron(fstream &load_stream, double learning_speed = 0.05, double inertia =
-			0.5);
+			0.0);
 	virtual ~BackpropagationPerceptron();
 
 	double learning_speed();
@@ -36,6 +36,8 @@ public:
 	double* evaluate(double* input_row);
 	void teach(double* expected_row);
 	void teach_by_errors_row(double* errors_row);
+	void perceptron_learning(double** rows, double** results, size_t data_count, size_t test_part =
+			10, size_t miss_iterations_to_stop = 10, double decrease_learning_speed_factor = 0.9);
 	void perceptron_learning(double** rows, double** results, size_t data_count, double** test_rows,
 			double** test_results, size_t test_data_count, size_t miss_iterations_to_stop = 10,
 			double decrease_learning_speed_factor = 0.9);
