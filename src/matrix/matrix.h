@@ -15,9 +15,10 @@ namespace matrix {
 class Matrix {
 
 public:
-	Matrix();
 	Matrix(size_t rows_count, size_t columns_count);
 	virtual ~Matrix();
+
+	Matrix* clone();
 
 	size_t rows_count();
 	size_t columns_count();

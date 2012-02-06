@@ -13,10 +13,6 @@ namespace matrix {
 
 using std::copy;
 
-Matrix::Matrix() :
-		rows_count_(0), columns_count_(0) {
-}
-
 Matrix::Matrix(size_t rows_count, size_t columns_count) {
 	rows_count_ = rows_count;
 	columns_count_ = columns_count;
@@ -30,6 +26,16 @@ Matrix::~Matrix() {
 		}
 		delete[] matrix_;
 	}
+}
+
+Matrix* Matrix::clone() {
+	Matrix *cloned_matrix = new Matrix(rows_count_, columns_count_);
+	cloned_matrix->matrix_ = new double*[rows_count_];
+	for (size_t i = 0; i != rows_count_; i++) {
+		cloned_matrix->matrix_[i] = new double[columns_count_];
+		copy(matrix_[i], matrix_[i] + columns_count_, cloned_matrix->matrix_[i]);
+	}
+	return cloned_matrix;
 }
 
 size_t Matrix::rows_count() {
@@ -60,7 +66,8 @@ Matrix& Matrix::operator -=(const double &value) {
 /*
  * Non standart multiplication operator. Multiply row on rows, return one row
  */
-void Matrix::multiply_row_with_rows_to_row(const double *first, Matrix &second, double *destination) {
+void Matrix::multiply_row_with_rows_to_row(const double *first, Matrix &second,
+		double *destination) {
 	for (size_t i = 0; i != second.rows_count_; i++) {
 		destination[i] = 0;
 		for (size_t j = 0; j != second.columns_count_; j++) {
