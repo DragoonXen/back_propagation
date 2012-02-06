@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <time.h>
 
 namespace perceptron {
 
@@ -23,12 +24,21 @@ using std::random_shuffle;
 using std::fill;
 
 BackpropagationPerceptron::BackpropagationPerceptron(vector<size_t> &layers, double learning_speed,
-		double inertia) {
+		double inertia, bool add_const_x) {
 	remembered_W_ = NULL;
 	learning_speed_ = learning_speed;
 	inertia_ = inertia;
-	add_const_x_ = true;
+	add_const_x_ = add_const_x;
 	init(layers);
+}
+
+BackpropagationPerceptron::BackpropagationPerceptron(fstream &load_stream, double learning_speed,
+		double inertia, bool add_const_x) {
+	remembered_W_ = NULL;
+	learning_speed_ = learning_speed;
+	inertia_ = inertia;
+	add_const_x_ = add_const_x;
+	load(load_stream);
 }
 
 BackpropagationPerceptron::~BackpropagationPerceptron() {
@@ -50,7 +60,6 @@ BackpropagationPerceptron::~BackpropagationPerceptron() {
 	delete[] prev_direction_W_;
 	delete[] answers_;
 	delete[] descent_gradient_;
-	delete[] temp_row_;
 	delete[] errors_row_;
 }
 
@@ -59,6 +68,13 @@ double BackpropagationPerceptron::learning_speed() {
 }
 void BackpropagationPerceptron::learning_speed(double value) {
 	learning_speed_ = value;
+}
+
+double BackpropagationPerceptron::inertia() {
+	return inertia_;
+}
+void BackpropagationPerceptron::inertia(double value) {
+	inertia_ = value;
 }
 
 double* BackpropagationPerceptron::evaluate(double* input_row) {
@@ -101,26 +117,11 @@ void BackpropagationPerceptron::teach_by_errors_row(double* errors_row) {
 
 	while (index > 0) {
 		--index;
-		/*
-		 * first variant:
-		 * 		for (size_t i = 0; i != layer_neuron_count_[index + 1]; i++) {
-		 * 			gradient_[index][i] = 0;
-		 * 			for (size_t j = 0; j != layer_neuron_count_[index + 2]; j++) {
-		 * 				gradient_[index][i] += (*W_[index + 1])[j][i] * gradient_[index + 1][j]
-		 * 						* (1.0 - answers_[index + 1][j]) * answers_[index + 1][j];
-		 * 			}
-		 * 		}
-		 */
-		for (size_t j = 0; j != layer_neuron_count_[index + 2]; j++) {
-			temp_row_[j] = descent_gradient_[index + 1][j] * (1.0 - answers_[index + 1][j])
-					* answers_[index + 1][j];
-		}
 		for (size_t i = 0; i != layer_neuron_count_[index + 1]; i++) {
 			descent_gradient_[index][i] = 0;
-		}
-		for (size_t j = 0; j != layer_neuron_count_[index + 2]; j++) {
-			for (size_t i = 0; i != layer_neuron_count_[index + 1]; i++) {
-				descent_gradient_[index][i] += (*W_[index + 1])[j][i] * temp_row_[j];
+			for (size_t j = 0; j != layer_neuron_count_[index + 2]; j++) {
+				descent_gradient_[index][i] += (*W_[index + 1])[j][i] * descent_gradient_[index + 1][j]
+						* (1.0 - answers_[index + 1][j]) * answers_[index + 1][j];
 			}
 		}
 	}
@@ -138,7 +139,8 @@ void BackpropagationPerceptron::teach_by_errors_row(double* errors_row) {
 }
 
 void BackpropagationPerceptron::perceptron_learning(double** rows, double** results,
-		size_t data_count, double** test_rows, double** test_results, size_t test_data_count) {
+		size_t data_count, double** test_rows, double** test_results, size_t test_data_count,
+		size_t miss_iterations_to_stop, double decrease_learning_speed_factor) {
 	size_t order[data_count];
 	for (size_t i = 0; i != data_count; i++) {
 		order[i] = i;
@@ -152,8 +154,8 @@ void BackpropagationPerceptron::perceptron_learning(double** rows, double** resu
 	double best_errors_sum = errors_sum;
 	size_t number_of_iterations = 0;
 	size_t last_succsess_iteration = 0;
-	while (last_succsess_iteration + 200 > number_of_iterations) {
-		learning_speed_ = errors_sum * base_learning_speed;
+	while (last_succsess_iteration + miss_iterations_to_stop > number_of_iterations) {
+		clock_t time = clock();
 		++number_of_iterations;
 		random_shuffle(order, order + data_count);
 		for (size_t i = 0; i != data_count; i++) {
@@ -162,12 +164,15 @@ void BackpropagationPerceptron::perceptron_learning(double** rows, double** resu
 
 		}
 		errors_sum = evaluate_perceptron(test_rows, test_results, test_data_count);
+		cout << "iteration #" << number_of_iterations << ": " << errors_sum << ", learning speed: "
+				<< learning_speed_ << endl;
 		if (errors_sum < best_errors_sum) {
 			best_errors_sum = errors_sum;
-			cout << "iteration #" << number_of_iterations << ": " << errors_sum << endl;
 			status_remember();
 			last_succsess_iteration = number_of_iterations;
 		}
+		cout << clock() - time << endl;
+		learning_speed_ *= decrease_learning_speed_factor;
 	}
 
 	status_recover();
@@ -190,15 +195,39 @@ double BackpropagationPerceptron::evaluate_perceptron(double** test_rows, double
 
 //private
 
-void BackpropagationPerceptron::init(vector<size_t> &layers) {
+void BackpropagationPerceptron::load(fstream &load_stream) {
+	load_stream.read((char*) &layers_count_, sizeof(layers_count_));
+	vector<size_t> layers;
+	layers.reserve(layers_count_);
+	for (size_t i = 0; i != layers_count_; i++) {
+		size_t tmp;
+		load_stream.read((char*) &tmp, sizeof(tmp));
+		layers.push_back(tmp);
+	}
+	init(layers, false);
+	for (size_t i = 0; i != layers_count_ - 1; i++) {
+		for (size_t j = 0; j != W_[i]->rows_count(); j++) {
+			load_stream.read((char*) (*W_[i])[j], sizeof(*(*W_[i])[j]) * W_[i]->columns_count());
+		}
+	}
+}
+
+void BackpropagationPerceptron::save(fstream &save_stream) {
+	save_stream.write((char*) &layers_count_, sizeof(layers_count_));
+	save_stream.write((char*) layer_neuron_count_, sizeof(layer_neuron_count_[0]) * layers_count_);
+	for (size_t i = 0; i != layers_count_ - 1; i++) {
+		for (size_t j = 0; j != W_[i]->rows_count(); j++) {
+			save_stream.write((char*) (*W_[i])[j], sizeof(*(*W_[i])[j]) * W_[i]->columns_count());
+		}
+	}
+}
+
+void BackpropagationPerceptron::init(vector<size_t> &layers, bool randomize_matrix) {
 	layers_count_ = layers.size();
 	layer_neuron_count_ = new size_t[layers_count_];
-	size_t max_layer_neuron_count = layers[0];
 	for (size_t i = 0; i < layers_count_; i++) {
-		max_layer_neuron_count = fmax(max_layer_neuron_count, layers[i]);
 		layer_neuron_count_[i] = layers[i];
 	}
-	temp_row_ = new double[max_layer_neuron_count + 1];
 
 	W_ = new Matrix*[layers_count_ - 1];
 	prev_direction_W_ = new Matrix*[layers_count_ - 1];
@@ -207,9 +236,13 @@ void BackpropagationPerceptron::init(vector<size_t> &layers) {
 	answers_ = new double*[layers_count_];
 
 	for (size_t i = 0; i < layers_count_ - 1; i++) {
-		W_[i] = Matrix::create_rand_matrix(layer_neuron_count_[i + 1],
-				layer_neuron_count_[i] + add_const_x_);
-		*W_[i] -= 0.5;
+		if (randomize_matrix) {
+			W_[i] = Matrix::create_rand_matrix(layer_neuron_count_[i + 1],
+					layer_neuron_count_[i] + add_const_x_);
+			*W_[i] -= 0.5;
+		} else {
+			W_[i] = new Matrix(layer_neuron_count_[i + 1], layer_neuron_count_[i] + add_const_x_);
+		}
 		prev_direction_W_[i] = new Matrix(layer_neuron_count_[i + 1],
 				layer_neuron_count_[i] + add_const_x_);
 
@@ -241,7 +274,8 @@ void BackpropagationPerceptron::status_recover() {
 		delete (W_[i]);
 		W_[i] = remembered_W_[i]->clone();
 		for (size_t j = 0; j != prev_direction_W_[i]->rows_count(); j++) {
-			fill((*prev_direction_W_[i])[j], (*prev_direction_W_[i])[j] + prev_direction_W_[i]->columns_count(), 0.0);
+			fill((*prev_direction_W_[i])[j],
+					(*prev_direction_W_[i])[j] + prev_direction_W_[i]->columns_count(), 0.0);
 		}
 	}
 }

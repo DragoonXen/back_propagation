@@ -10,30 +10,41 @@
 
 #include "../matrix/matrix.h"
 
+#include <fstream>
 #include <vector>
 
 namespace perceptron {
 
 using matrix::Matrix;
 using std::vector;
+using std::fstream;
 
 class BackpropagationPerceptron {
 
 public:
-	BackpropagationPerceptron(vector<size_t> &layers, double learning_speed = 0.05, double inertia = 0.5);
+	BackpropagationPerceptron(vector<size_t> &layers, double learning_speed = 0.05, double inertia =
+			0.5, bool add_const_x = true);
+	BackpropagationPerceptron(fstream &load_stream, double learning_speed = 0.05, double inertia =
+			0.5, bool add_const_x = true);
 	virtual ~BackpropagationPerceptron();
 
 	double learning_speed();
 	void learning_speed(double value);
+	double inertia();
+	void inertia(double value);
 
 	double* evaluate(double* input_row);
 	void teach(double* expected_row);
 	void teach_by_errors_row(double* errors_row);
-	void perceptron_learning(double** rows, double** results, size_t data_count, double** test_rows, double** test_results, size_t test_data_count);
+	void perceptron_learning(double** rows, double** results, size_t data_count, double** test_rows,
+			double** test_results, size_t test_data_count, size_t miss_iterations_to_stop = 10,
+			double decrease_learning_speed_factor = 0.9);
 	double evaluate_perceptron(double** test_rows, double** test_results, size_t test_data_count);
+	void save(fstream &save_stream);
 
 private:
-	void init(vector<size_t> &layers);
+	void load(fstream &load_stream);
+	void init(vector<size_t> &layers, bool randomize_matrix = true);
 	void status_remember();
 	void status_recover();
 
@@ -44,7 +55,6 @@ private:
 	Matrix** prev_direction_W_;
 	double** descent_gradient_;
 	double** answers_;
-	double* temp_row_;
 	double* errors_row_;
 	bool add_const_x_;
 	double learning_speed_;
